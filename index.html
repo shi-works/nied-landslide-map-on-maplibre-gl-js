@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <title>地すべり地形分布図日本全国版（防災科学技術研究所）</title>
+    <title>地すべり地形分布図（防災科学技術研究所）</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src='https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.js'></script>
@@ -56,6 +56,27 @@
             margin: 0;
             cursor: ew-resize;
         }
+
+        .legend-png {
+            position: absolute;
+            bottom: 50px;
+            right: 10px;
+            z-index: 1;
+            background: white;
+            padding: 5px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            width: fit-content;
+        }
+
+        .image-container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .legend-png img {
+            width: 180px;
+            height: 450px;
+        }
     </style>
 </head>
 
@@ -63,11 +84,17 @@
     <div id="map"></div>
     <div class="map-overlay top">
         <div class="map-overlay-inner">
-            <label>地すべり地形分布図 不透明度: <span id="ortho-slider-opacity-value">100%</span></label>
-            <input id="ortho-slider-opacity" type="range" min="0" max="100" step="1" value="100">
+            <label>地すべり地形分布図 不透明度: <span id="landslide-slider-opacity-value">100%</span></label>
+            <input id="landslide-slider-opacity" type="range" min="0" max="100" step="1" value="100">
+            <label>陰影起伏図 不透明度: <span id="hillshade-slider-opacity-value">50%</span></label>
+            <input id="hillshade-slider-opacity" type="range" min="0" max="100" step="1" value="50">
         </div>
     </div>
-
+    <div class="legend-png">
+        <div class="image-container">
+            <img src="legend.png" alt="Legend" id="legend-image">
+        </div>
+    </div>
     <script>
         // protocolを設定
         let protocol = new pmtiles.Protocol();
@@ -112,7 +139,7 @@
         // Attributionを折りたたみ表示
         map.addControl(new maplibregl.AttributionControl({
             compact: true,
-            customAttribution: '<a href="https://twitter.com/shi__works" target="_blank">Twitter</a> | <a href="" target="_blank">Github</a>'
+            customAttribution: '<a href="https://twitter.com/shi__works" target="_blank">Twitter</a> | <a href="https://github.com/shi-works/nied-landslide-map-on-maplibre-gl-js" target="_blank">Github</a>'
         }));
 
         // 3D地形コントロール
@@ -134,6 +161,8 @@
                 tileSize: 256
             });
 
+            map.setTerrain({ 'source': 'gsidem', 'exaggeration': 1 });
+
             // 陰影起伏図ソース
             map.addSource("hillshade", {
                 type: 'raster',
@@ -152,7 +181,7 @@
                 minzoom: 2,
                 maxzoom: 18,
                 paint: {
-                    'raster-opacity': 0.3
+                    'raster-opacity': 0.5
                 }
             });
 
@@ -178,21 +207,51 @@
                 }
             });
 
-            const orthosliderOpactiy = document.getElementById('ortho-slider-opacity');
-            const orthosliderOpactiyValue = document.getElementById('ortho-slider-opacity-value');
+            // 陰影起伏図の不透明度をスライダーで制御
+            const hillshadesliderOpactiy = document.getElementById('hillshade-slider-opacity');
+            const hillshadesliderOpactiyValue = document.getElementById('hillshade-slider-opacity-value');
 
-            orthosliderOpactiy.addEventListener('input', (e) => {
+            hillshadesliderOpactiy.addEventListener('input', (e) => {
+                map.setPaintProperty(
+                    'hillshade-tiles',
+                    'raster-opacity',
+                    parseInt(e.target.value, 10) / 100
+                );
+                hillshadesliderOpactiyValue.textContent = e.target.value + '%';
+            });
+
+            // 地すべり地形分布図の不透明度をスライダーで制御
+            const landslidesliderOpactiy = document.getElementById('landslide-slider-opacity');
+            const landslidesliderOpactiyValue = document.getElementById('landslide-slider-opacity-value');
+
+            landslidesliderOpactiy.addEventListener('input', (e) => {
                 map.setPaintProperty(
                     'landslide-tiles',
                     'raster-opacity',
                     parseInt(e.target.value, 10) / 100
                 );
-                orthosliderOpactiyValue.textContent = e.target.value + '%';
+                landslidesliderOpactiyValue.textContent = e.target.value + '%';
             });
 
             map.showTileBoundaries = false;
 
         })
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // ID 'legend-image' を持つ要素を取得
+            const legendImage = document.getElementById('legend-image');
+
+            // 画像がクリックされたときのイベントリスナーを追加
+            legendImage.addEventListener('click', function () {
+                // 新しいウィンドウを開いて、画像を表示
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write('<html><head><title>Legend</title></head><body>');
+                newWindow.document.write('<img src="' + legendImage.src + '" alt="Legend">');
+                newWindow.document.write('</body></html>');
+                newWindow.document.close();
+            });
+        });
+
     </script>
 </body>
 
